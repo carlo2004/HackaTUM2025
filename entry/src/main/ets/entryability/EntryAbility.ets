@@ -2,9 +2,18 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 
+// Watch
+import sensor from '@system.sensor';
+import vibrator from '@system.vibrator';
+
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
+  // Sensor Data
+  private lastPeakTime: number = 0;
+  private beats: number[] = [];
+  private currentBPM: number = 0;
+
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');

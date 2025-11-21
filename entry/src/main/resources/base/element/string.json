@@ -11,6 +11,22 @@
     {
       "name": "EntryAbility_label",
       "value": "label"
+    },
+    {
+      "name": "why_health",
+      "value": "Benötigt, um Gesundheitsdaten für CPR-Analyse zu lesen."
+    },
+    {
+      "name": "why_motion",
+      "value": "Benötigt, um Bewegungsdaten für CPR-Takt zu erfassen."
+    },
+    {
+      "name": "why_accelerometer",
+      "value": "Benötigt, um Kompressionen über Beschleunigungsdaten zu erkennen."
+    },
+    {
+      "name": "why_vibrate",
+      "value": "Benötigt, um Vibrationsfeedback zu geben."
     }
   ]
 }
