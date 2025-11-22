@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\attil\\.ohos\\config\\default_HackaTUM2025_XDKmznv1l1FHslh1Tr7mAtLir9rJilyE-B-L8s2qUHw=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B1726E2B60EC491C49CC21515CFD7783B6320C56201C724D2A3D36B2FA1F2CA6D4AA2008E734B78",
+          "profile": "C:\\Users\\attil\\.ohos\\config\\default_HackaTUM2025_XDKmznv1l1FHslh1Tr7mAtLir9rJilyE-B-L8s2qUHw=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\attil\\.ohos\\config\\default_HackaTUM2025_XDKmznv1l1FHslh1Tr7mAtLir9rJilyE-B-L8s2qUHw=.p12",
+          "storePassword": "0000001BDF71F161BE2E20F265C9C325C915C59BCF733E62DBDD856BEF8E6AFB51E0487B3B7F3E104366ED"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",

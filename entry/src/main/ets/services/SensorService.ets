@@ -2,7 +2,6 @@ import { sensor } from '@kit.SensorServiceKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 export class SensorBundle {
-
   accelX: number = 0;
   accelY: number = 0;
   accelZ: number = 0;
@@ -18,7 +17,7 @@ export class SensorBundle {
 
 export class SensorService {
 
-  private SIMULATION_MODE: boolean = true;
+  private SIMULATION_MODE: boolean = false;
 
   private latestAccelX: number = 0;
   private latestAccelY: number = 0;
@@ -35,44 +34,30 @@ export class SensorService {
   private isListening: boolean = false;
   private simTimer: number = 0;
 
-  private onCompressionDetected: (force: number) => void = () => {};
+  private lastCompressionTime: number = 0;
+  private currentBPM: number = 0;
 
-  setCallback(callback: (force: number) => void) {
+  private onCompressionDetected: (bpm: number, depth: number) => void = () => {};
+
+  setCallback(callback: (bpm: number, depth: number) => void) {
     this.onCompressionDetected = callback;
   }
 
-  public getAccelX(): number { return this.latestAccelX; }
-  public getAccelY(): number { return this.latestAccelY; }
-  public getAccelZ(): number { return this.latestAccelZ; }
-
-  public getGyroX(): number { return this.latestGyroX; }
-  public getGyroY(): number { return this.latestGyroY; }
-  public getGyroZ(): number { return this.latestGyroZ; }
-
-  public getHeartRate(): number { return this.latestHR; }
-  public getOxygen(): number { return this.latestSpO2; }
-  public getTemperature(): number { return this.latestTemp; }
-
   public getAllSensors(): SensorBundle {
     let bundle = new SensorBundle();
-
     bundle.accelX = this.latestAccelX;
     bundle.accelY = this.latestAccelY;
     bundle.accelZ = this.latestAccelZ;
-
     bundle.gyroX = this.latestGyroX;
     bundle.gyroY = this.latestGyroY;
     bundle.gyroZ = this.latestGyroZ;
-
     bundle.heartRate = this.latestHR;
     bundle.oxygen = this.latestSpO2;
     bundle.temperature = this.latestTemp;
-
     return bundle;
   }
 
   private logSensor(name: string, val: number) {
-
     hilog.info(0x0000, 'HACKATHON', '%{public}s: %{public}s', name, val.toFixed(4));
   }
 
@@ -111,9 +96,27 @@ export class SensorService {
         this.logSensor("Real_Acc_Y", data.y);
         this.logSensor("Real_Acc_Z", data.z);
 
-        if (data.z < -15) {
-          this.onCompressionDetected(data.z);
-          hilog.warn(0x0000, 'HACKATHON', "CPR COMPRESSION DETECTED: %{public}s", data.z.toFixed(2));
+        if (data.z < -10) {
+          let now = Date.now();
+
+          if (now - this.lastCompressionTime > 300) {
+
+            if (this.lastCompressionTime !== 0) {
+              let diff = now - this.lastCompressionTime;
+              this.currentBPM = 60000 / diff;
+            } else {
+              this.currentBPM = 110;
+            }
+
+            this.lastCompressionTime = now;
+
+            let estimatedDepth = Math.abs(data.z) / 3.5;
+            if (estimatedDepth > 7) estimatedDepth = 6.5;
+
+            this.onCompressionDetected(this.currentBPM, estimatedDepth);
+
+            hilog.warn(0x0000, 'HACKATHON', ">>> COMPRESSION EVENT: BPM %{public}s", this.currentBPM.toFixed(0));
+          }
         }
       }, { interval: 20000000 });
 
@@ -130,7 +133,8 @@ export class SensorService {
       sensor.on(sensor.SensorId.HEART_RATE, (data) => {
         this.latestHR = data.heartRate;
 
-        this.logSensor("Real_HR", data.heartRate);
+        hilog.info(0x0000, 'HACKATHON', "Real_HR: %{public}s", data.heartRate.toString());
+
       }, { interval: 1000000000 });
 
     } catch (e) {
@@ -148,40 +152,5 @@ export class SensorService {
     }
   }
 
-  private startSimulation() {
-    let tick = 0;
-
-    this.simTimer = setInterval(() => {
-      tick += 0.1;
-
-      let pushForce = -9.8 + (Math.sin(tick) * 12);
-      if (pushForce < -15) {
-        this.latestAccelZ = pushForce;
-        this.onCompressionDetected(this.latestAccelZ);
-      } else {
-        this.latestAccelZ = -9.8;
-      }
-
-      this.latestAccelX = (Math.random() - 0.5) * 2;
-      this.latestAccelY = (Math.random() - 0.5) * 2;
-
-      this.latestGyroX = Math.sin(tick * 0.5) * 0.5;
-      this.latestGyroY = Math.cos(tick * 0.5) * 0.5;
-      this.latestGyroZ = (Math.random() - 0.5) * 0.1;
-
-      this.latestHR = 80 + Math.floor(tick * 2);
-      if (this.latestHR > 160) this.latestHR = 160;
-
-      this.logSensor("Sim_Acc_X", this.latestAccelX);
-      this.logSensor("Sim_Acc_Y", this.latestAccelY);
-      this.logSensor("Sim_Acc_Z", this.latestAccelZ);
-
-      this.logSensor("Sim_Gyr_X", this.latestGyroX);
-      this.logSensor("Sim_Gyr_Y", this.latestGyroY);
-      this.logSensor("Sim_Gyr_Z", this.latestGyroZ);
-
-      this.logSensor("Sim_HR", this.latestHR);
-
-    }, 100);
-  }
+  private startSimulation() {  }
 }

@@ -1,12 +1,12 @@
 import { CPRManager } from '../manager/CPRManager';
 import { CPRStats } from '../model/Models';
 import { SensorService } from '../services/SensorService';
+import { common } from '@kit.AbilityKit';
 
 @Entry
 @Component
 struct Index {
-  private cprManager: CPRManager = new CPRManager();
-
+  private cprManager: CPRManager | undefined = undefined;
   private sensors: SensorService = new SensorService();
 
   @State feedbackMsg: string = "START";
@@ -16,8 +16,16 @@ struct Index {
   @State mainColor: string = '#E60000';
   @State currentBPM: string = "--";
 
+  @State isGuiding: boolean = false;
+
   aboutToAppear() {
+    let context = getContext(this) as common.UIAbilityContext;
+    this.cprManager = new CPRManager(context);
+
     this.cprManager.setUIUpdateCallback((stats: CPRStats, text: string) => {
+
+      if (this.isGuiding) return;
+
       this.feedbackMsg = text;
       this.currentBPM = stats.currentBPM > 0 ? stats.currentBPM.toFixed(0) : "--";
 
@@ -34,18 +42,41 @@ struct Index {
         else this.subText = "CHECK FORM";
       }
     });
+
+    this.sensors.setCallback((bpm: number, depth: number) => {
+      if (this.cprManager) {
+        this.cprManager.ingestAIResults(bpm, depth);
+      }
+    });
+  }
+
+  runGuideSequence() {
+    this.isGuiding = true;
+
+    setTimeout(() => {
+      if (!this.isRunning) return;
+
+      this.isGuiding = false;
+      this.feedbackMsg = "ANALYZING...";
+      this.subText = "PUSH HARD & FAST";
+    }, 14000);
   }
 
   toggleState() {
+    if (!this.cprManager) return;
+
     this.isRunning = !this.isRunning;
     if (this.isRunning) {
       this.cprManager.startCPR();
       this.sensors.start();
-      this.feedbackMsg = "ANALYZING...";
-      this.subText = "FIND RHYTHM";
+
+      this.runGuideSequence();
+
     } else {
       this.cprManager.stopCPR();
       this.sensors.stop();
+
+      this.isGuiding = false;
       this.feedbackMsg = "STOPPED";
       this.subText = "TAP TO RESTART";
       this.currentBPM = "--";
@@ -74,30 +105,53 @@ struct Index {
 
       Column() {
 
-        Text(this.currentBPM)
-          .fontSize(24)
-          .fontColor(Color.Gray)
-          .fontWeight(FontWeight.Bold)
-          .margin({ bottom: 5 })
+        if (this.isGuiding) {
 
-        Text(this.feedbackMsg)
-          .fontSize(32)
-          .minFontSize(10)
-          .maxFontSize(32)
-          .maxLines(1)
-          .fontWeight(FontWeight.Bolder)
-          .fontColor(Color.White)
-          .textAlign(TextAlign.Center)
-          .width('90%')
-          .height(40)
+          Blank().height('10%')
 
-        Text(this.subText)
-          .fontSize(18)
-          .fontColor('#DDDDDD')
-          .fontWeight(FontWeight.Medium)
-          .margin({ top: 5 })
+          Image($r('app.media.cpr_hands'))
+            .width('85%')
+            .objectFit(ImageFit.Contain)
+            .layoutWeight(1)
+            .shadow({ radius: 15, color: 'rgba(0,0,0,0.5)' })
 
-        Blank().height('15%')
+          Text("FOLLOW AUDIO")
+            .fontSize(14)
+            .fontColor('#AAAAAA')
+            .fontWeight(FontWeight.Medium)
+            .margin({ top: 10, bottom: 10 })
+
+        } else {
+
+          Blank().height('15%')
+
+          Text(this.currentBPM)
+            .fontSize(24)
+            .fontColor(Color.Gray)
+            .fontWeight(FontWeight.Bold)
+            .margin({ bottom: 5 })
+
+          Text(this.feedbackMsg)
+            .fontSize(32)
+            .minFontSize(10)
+            .maxFontSize(32)
+            .maxLines(1)
+            .fontWeight(FontWeight.Bolder)
+            .fontColor(Color.White)
+            .textAlign(TextAlign.Center)
+            .width('90%')
+            .height(40)
+
+          Text(this.subText)
+            .fontSize(18)
+            .fontColor('#DDDDDD')
+            .fontWeight(FontWeight.Medium)
+            .textAlign(TextAlign.Center)
+            .width('95%')
+            .margin({ top: 5 })
+
+          Blank().height('15%')
+        }
 
         Button(this.isRunning ? "STOP" : "START")
           .width(120)
@@ -108,6 +162,7 @@ struct Index {
           .fontSize(18)
           .type(ButtonType.Capsule)
           .shadow({ radius: 10, color: '#40000000', offsetY: 5 })
+          .margin({ bottom: 20 })
           .onClick(() => {
             this.toggleState();
           })

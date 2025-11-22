@@ -1,6 +1,8 @@
 import { FeedbackService } from '../services/FeedbackService';
 import { AudioService } from '../services/AudioService';
 import { CPRStats } from '../model/Models';
+import { common } from '@kit.AbilityKit'; // Import common
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 export class CPRManager {
   private haptics: FeedbackService;
@@ -8,18 +10,16 @@ export class CPRManager {
   public stats: CPRStats = new CPRStats();
 
   public feedbackText: string = "PERFECT";
-
   private isRunning: boolean = false;
   private metronomeTimer: number = 0;
-
   private lastErrorTime: number = 0;
   private lastPositiveTime: number = 0;
-
   private uiUpdateCallback: (stats: CPRStats, text: string) => void = () => {};
 
-  constructor() {
+  // UPDATE CONSTRUCTOR
+  constructor(context: common.UIAbilityContext) {
     this.haptics = new FeedbackService();
-    this.audio = new AudioService();
+    this.audio = new AudioService(context); // Pass context here
   }
 
   setUIUpdateCallback(cb: (stats: CPRStats, text: string) => void) {
@@ -30,15 +30,12 @@ export class CPRManager {
     this.stats.currentBPM = bpm;
     this.stats.lastPushDepth = depth;
     this.stats.totalCompressions++;
-
     this.decideFeedback(bpm, depth);
-
     this.uiUpdateCallback(this.stats, this.feedbackText);
   }
 
   private decideFeedback(bpm: number, depth: number) {
     let now = Date.now();
-
     if (now - this.lastErrorTime < 2000) return;
 
     if (bpm > 125) {
@@ -49,18 +46,12 @@ export class CPRManager {
       this.handleError("TOO SLOW", "faster.mp3");
       return;
     }
-
     if (depth < 5.0) {
       this.handleError("PUSH DEEPER", "deeper.mp3");
       return;
     }
-    if (depth > 6.0) {
-      this.handleError("PUSH LIGHTER", "lighter.mp3");
-      return;
-    }
 
     this.feedbackText = "PERFECT RHYTHM";
-
     if (now - this.lastPositiveTime > 15000) {
       this.audio.playVoiceCommand("youreDoingGreat.mp3");
       this.lastPositiveTime = now;
@@ -79,6 +70,7 @@ export class CPRManager {
     this.stats.startTime = Date.now();
     this.stats.totalCompressions = 0;
 
+    hilog.info(0x0000, 'HACKATHON', "Triggering START audio");
     this.audio.playVoiceCommand("startingCPRassist.mp3");
 
     this.metronomeTimer = setInterval(() => {
