@@ -29,12 +29,16 @@ export class SensorService {
 
   private gravityEstimate: number = 9.8;
   private lastBeatTime: number = 0;
-  private bpmBuffer: number[] = [];
+
+  private beatTimestamps: number[] = [];
+
   private inactivityTimer: number = 0;
 
-  private MIN_BEAT_INTERVAL: number = 400;
+  private WINDOW_SIZE_MS: number = 5000;
 
-  private PUSH_THRESHOLD: number = 3.5;
+  private MIN_BEAT_INTERVAL: number = 350;
+
+  private PUSH_THRESHOLD: number = 2.8;
 
   private onCompressionDetected: (bpm: number, depth: number, incompleteRecoil: boolean) => void = () => {};
 
@@ -43,7 +47,7 @@ export class SensorService {
   }
 
   public calibrate() {
-    this.bpmBuffer = [];
+    this.beatTimestamps = [];
     this.lastBeatTime = 0;
     hilog.info(0x0000, 'HACKATHON', "Sensor Calibrated");
   }
@@ -51,7 +55,7 @@ export class SensorService {
   start() {
     if (this.isListening) return;
     this.isListening = true;
-    this.bpmBuffer = [];
+    this.beatTimestamps = [];
     this.lastBeatTime = 0;
 
     this.startWatchdog();
@@ -68,17 +72,24 @@ export class SensorService {
   }
 
   private startWatchdog() {
+
     this.inactivityTimer = setInterval(() => {
       if (!this.isListening) return;
 
       let now = Date.now();
 
-      if (this.lastBeatTime > 0 && (now - this.lastBeatTime > 1800)) {
-        this.bpmBuffer = [];
+      this.beatTimestamps = this.beatTimestamps.filter(t => now - t < this.WINDOW_SIZE_MS);
+
+      if (this.lastBeatTime > 0 && (now - this.lastBeatTime > 1500)) {
+
         this.onCompressionDetected(0, 0, false);
+      }
+
+      else if (this.beatTimestamps.length >= 2) {
+        let bpm = this.calculateWindowedBPM();
 
       }
-    }, 500);
+    }, 1000);
   }
 
   private startRealSensors() {
@@ -111,7 +122,6 @@ export class SensorService {
   }
 
   private processCPRPulse(x: number, y: number, z: number) {
-
     let magnitude = Math.sqrt(x*x + y*y + z*z);
 
     this.gravityEstimate = 0.995 * this.gravityEstimate + 0.005 * magnitude;
@@ -122,47 +132,42 @@ export class SensorService {
 
     if (energy > this.PUSH_THRESHOLD) {
 
-      if (this.lastBeatTime !== 0 && (now - this.lastBeatTime > this.MIN_BEAT_INTERVAL)) {
+      if (now - this.lastBeatTime > this.MIN_BEAT_INTERVAL) {
 
-        let delta = now - this.lastBeatTime;
-        let instantBPM = 60000 / delta;
-
-        if (instantBPM > 30 && instantBPM < 160) {
-          this.addToBuffer(instantBPM);
-
-          let medianBPM = this.getMedianBPM();
-
-          let estimatedDepth = (energy / 12.0) * 6.0;
-          if (estimatedDepth < 2) estimatedDepth = 2;
-          if (estimatedDepth > 6.5) estimatedDepth = 6.5;
-
-          this.onCompressionDetected(medianBPM, estimatedDepth, false);
-
-          this.lastBeatTime = now;
-        } else if (instantBPM <= 30) {
-
-          this.lastBeatTime = now;
-        }
-
-      } else if (this.lastBeatTime === 0) {
-
+        this.beatTimestamps.push(now);
         this.lastBeatTime = now;
+
+        this.beatTimestamps = this.beatTimestamps.filter(t => now - t < this.WINDOW_SIZE_MS);
+
+        let stableBPM = this.calculateWindowedBPM();
+
+        let estimatedDepth = (energy / 11.0) * 5.5;
+        if (estimatedDepth < 2) estimatedDepth = 2;
+        if (estimatedDepth > 6.5) estimatedDepth = 6.5;
+
+        this.onCompressionDetected(stableBPM, estimatedDepth, false);
       }
     }
   }
 
-  private addToBuffer(bpm: number) {
-    this.bpmBuffer.push(bpm);
-    if (this.bpmBuffer.length > 5) this.bpmBuffer.shift();
-  }
+  private calculateWindowedBPM(): number {
+    if (this.beatTimestamps.length < 2) {
 
-  private getMedianBPM(): number {
-    if (this.bpmBuffer.length === 0) return 0;
+      return this.beatTimestamps.length === 1 ? 110 : 0;
+    }
 
-    let sorted = [...this.bpmBuffer].sort((a, b) => a - b);
+    let first = this.beatTimestamps[0];
+    let last = this.beatTimestamps[this.beatTimestamps.length - 1];
+    let durationSeconds = (last - first) / 1000.0;
+    let count = this.beatTimestamps.length - 1;
 
-    let mid = Math.floor(sorted.length / 2);
-    return sorted[mid];
+    if (durationSeconds <= 0) return 0;
+
+    let bpm = (count / durationSeconds) * 60;
+
+    if (bpm > 200) bpm = 200;
+
+    return bpm;
   }
 
   private stopRealSensors() {

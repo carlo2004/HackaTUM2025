@@ -16,7 +16,6 @@ export class CPRManager {
 
   private lastErrorTime: number = 0;
   private lastPositiveTime: number = 0;
-
   private ERROR_COOLDOWN: number = 5000;
 
   private shallowPushCounter: number = 0;
@@ -43,8 +42,11 @@ export class CPRManager {
 
   public ingestAIResults(bpm: number, depth: number, incompleteRecoil: boolean) {
     this.stats.currentBPM = bpm;
-    this.stats.lastPushDepth = depth;
-    if (bpm > 0) this.stats.totalCompressions++;
+
+    if (bpm > 0) {
+      this.stats.lastPushDepth = depth;
+      this.stats.totalCompressions++;
+    }
 
     this.decideFeedback(bpm, depth);
     this.uiUpdateCallback(this.stats, this.feedbackText);
@@ -53,41 +55,46 @@ export class CPRManager {
   private decideFeedback(bpm: number, depth: number) {
     let now = Date.now();
 
+    let visualState = "ANALYZING...";
+
+    if (bpm === 0) {
+      visualState = "PRESS FASTER";
+    } else if (bpm >= 100 && bpm <= 120) {
+      visualState = "PERFECT RHYTHM";
+    } else if (bpm > 120) {
+      visualState = "PRESS SLOWER";
+    } else {
+      visualState = "PRESS FASTER";
+    }
+
+    this.feedbackText = visualState;
+
     if (bpm === 0) {
       if (now - this.lastErrorTime > 3000) {
-        this.handleError("PRESS FASTER", "faster.mp3");
+        this.triggerAudio("PRESS FASTER", "faster.mp3");
       }
       return;
     }
 
     if (now - this.lastErrorTime < this.ERROR_COOLDOWN) return;
 
-    if (bpm >= 100 && bpm <= 120) {
-
+    if (visualState === "PERFECT RHYTHM") {
       if (now - this.lastPositiveTime > 12000) {
-        this.feedbackText = "PERFECT RHYTHM";
         this.audio.playVoiceCommand("youreDoingGreat.mp3");
         this.lastPositiveTime = now;
-      } else {
-        this.feedbackText = "PERFECT RHYTHM";
       }
-
       return;
     }
 
-    if (bpm > 120) {
-      this.handleError("PRESS SLOWER", "slower.mp3");
-      return;
+    if (visualState === "PRESS SLOWER") {
+      this.triggerAudio("PRESS SLOWER", "slower.mp3");
+    } else if (visualState === "PRESS FASTER") {
+      this.triggerAudio("PRESS FASTER", "faster.mp3");
     }
-    if (bpm < 100) {
-      this.handleError("PRESS FASTER", "faster.mp3");
-      return;
-    }
-
   }
 
-  private handleError(text: string, audioFile: string) {
-    this.feedbackText = text;
+  private triggerAudio(text: string, audioFile: string) {
+
     this.haptics.triggerError();
     this.audio.playVoiceCommand(audioFile);
     this.lastErrorTime = Date.now();
