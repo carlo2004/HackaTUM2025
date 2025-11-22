@@ -33,13 +33,15 @@ struct Index {
         this.mainColor = '#FF3333';
         if (text.includes("FAST")) this.subText = "SPEED UP";
         else if (text.includes("SLOW")) this.subText = "SLOW DOWN";
+        else if (text.includes("DEEPER")) this.subText = "PUSH HARDER";
+        else if (text.includes("RELEASE")) this.subText = "RELEASE CHEST";
         else this.subText = "CHECK RHYTHM";
       }
     });
 
-    this.sensors.setCallback((bpm: number, depth: number, incompleteRecoil: boolean) => {
+    this.sensors.setCallback((bpm: number, depth: number, incompleteRecoil: boolean, mlFeedback: string) => {
       if (this.cprManager) {
-        this.cprManager.ingestAIResults(bpm, depth, incompleteRecoil);
+        this.cprManager.ingestAIResults(bpm, depth, incompleteRecoil, mlFeedback);
       }
     });
   }
@@ -49,7 +51,6 @@ struct Index {
 
     this.isRunning = !this.isRunning;
     if (this.isRunning) {
-
       this.cprManager.startCPR(this.sensors);
       this.sensors.start();
       this.showCalibrate = true;
