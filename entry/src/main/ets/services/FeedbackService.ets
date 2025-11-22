@@ -1,9 +1,7 @@
-// src/main/ets/services/FeedbackService.ts
 import { vibrator } from '@kit.SensorServiceKit';
 
 export class FeedbackService {
 
-  // The Metronome Tick (Short, Sharp)
   triggerMetronome() {
     try {
       vibrator.startVibration({
@@ -14,12 +12,11 @@ export class FeedbackService {
     } catch (e) {}
   }
 
-  // The Warning Buzz (Long, Scary)
-  triggerWarning() {
+  triggerError() {
     try {
       vibrator.startVibration({
         type: 'time',
-        duration: 500, // 0.5 seconds long buzz
+        duration: 800,
       }, { usage: 'alarm' });
     } catch (e) {}
   }
