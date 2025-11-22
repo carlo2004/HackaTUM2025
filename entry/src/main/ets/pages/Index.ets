@@ -12,54 +12,36 @@ struct Index {
   @State feedbackMsg: string = "START";
   @State subText: string = "TAP TO BEGIN";
   @State isRunning: boolean = false;
-  @State heartScale: number = 1.0;
   @State mainColor: string = '#E60000';
   @State currentBPM: string = "--";
+  @State heartScale: number = 1.0;
 
-  @State isGuiding: boolean = false;
+  @State showCalibrate: boolean = false;
 
   aboutToAppear() {
     let context = getContext(this) as common.UIAbilityContext;
     this.cprManager = new CPRManager(context);
 
     this.cprManager.setUIUpdateCallback((stats: CPRStats, text: string) => {
-
-      if (this.isGuiding) return;
-
       this.feedbackMsg = text;
       this.currentBPM = stats.currentBPM > 0 ? stats.currentBPM.toFixed(0) : "--";
 
-      if (text.includes("PERFECT")) {
+      if (text.includes("PERFECT") || text.includes("READY")) {
         this.mainColor = '#00AA00';
-        this.subText = "KEEP GOING";
+        this.subText = text.includes("READY") ? "GO!" : "KEEP GOING";
       } else {
         this.mainColor = '#FF3333';
-
-        if (text.includes("FAST")) this.subText = "SLOW DOWN";
-        else if (text.includes("SLOW")) this.subText = "SPEED UP";
-        else if (text.includes("HARDER")) this.subText = "PUSH DEEPER";
-        else if (text.includes("SOFTER")) this.subText = "LESS FORCE";
-        else this.subText = "CHECK FORM";
+        if (text.includes("FAST")) this.subText = "SPEED UP";
+        else if (text.includes("SLOW")) this.subText = "SLOW DOWN";
+        else this.subText = "CHECK RHYTHM";
       }
     });
 
-    this.sensors.setCallback((bpm: number, depth: number) => {
+    this.sensors.setCallback((bpm: number, depth: number, incompleteRecoil: boolean) => {
       if (this.cprManager) {
-        this.cprManager.ingestAIResults(bpm, depth);
+        this.cprManager.ingestAIResults(bpm, depth, incompleteRecoil);
       }
     });
-  }
-
-  runGuideSequence() {
-    this.isGuiding = true;
-
-    setTimeout(() => {
-      if (!this.isRunning) return;
-
-      this.isGuiding = false;
-      this.feedbackMsg = "ANALYZING...";
-      this.subText = "PUSH HARD & FAST";
-    }, 14000);
   }
 
   toggleState() {
@@ -67,16 +49,14 @@ struct Index {
 
     this.isRunning = !this.isRunning;
     if (this.isRunning) {
-      this.cprManager.startCPR();
+
+      this.cprManager.startCPR(this.sensors);
       this.sensors.start();
-
-      this.runGuideSequence();
-
+      this.showCalibrate = true;
     } else {
       this.cprManager.stopCPR();
       this.sensors.stop();
-
-      this.isGuiding = false;
+      this.showCalibrate = false;
       this.feedbackMsg = "STOPPED";
       this.subText = "TAP TO RESTART";
       this.currentBPM = "--";
@@ -84,9 +64,14 @@ struct Index {
     }
   }
 
+  calibrate() {
+    if (this.cprManager && this.isRunning) {
+      this.cprManager.calibrateSensor(this.sensors);
+    }
+  }
+
   build() {
     Stack() {
-
       Circle()
         .width('80%')
         .height('80%')
@@ -99,77 +84,79 @@ struct Index {
           iterations: -1,
           playMode: PlayMode.Alternate
         })
-        .onAppear(() => {
-          this.heartScale = 1.2;
-        })
+        .onAppear(() => { this.heartScale = 1.2; })
 
       Column() {
-
-        if (this.isGuiding) {
-
-          Blank().height('10%')
-
-          Image($r('app.media.cpr_hands'))
-            .width('85%')
-            .objectFit(ImageFit.Contain)
-            .layoutWeight(1)
-            .shadow({ radius: 15, color: 'rgba(0,0,0,0.5)' })
-
-          Text("FOLLOW AUDIO")
-            .fontSize(14)
-            .fontColor('#AAAAAA')
-            .fontWeight(FontWeight.Medium)
-            .margin({ top: 10, bottom: 10 })
-
+        if (!this.isRunning) {
+          Blank().height('30%')
+          Text("CPR ASSIST")
+            .fontSize(24)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(Color.White)
+          Blank().height('5%')
+          Button("START")
+            .width(140).height(140)
+            .borderRadius(70)
+            .backgroundColor('#E60000')
+            .fontColor(Color.White)
+            .fontSize(24)
+            .fontWeight(FontWeight.Bold)
+            .onClick(() => this.toggleState())
+          Blank().height('15%')
         } else {
-
           Blank().height('15%')
 
           Text(this.currentBPM)
-            .fontSize(24)
-            .fontColor(Color.Gray)
+            .fontSize(38)
+            .fontColor(Color.White)
             .fontWeight(FontWeight.Bold)
-            .margin({ bottom: 5 })
+
+          Text("BPM")
+            .fontSize(14).fontColor(Color.Gray)
+            .margin({ bottom: 10 })
 
           Text(this.feedbackMsg)
-            .fontSize(32)
-            .minFontSize(10)
-            .maxFontSize(32)
-            .maxLines(1)
+            .fontSize(28)
             .fontWeight(FontWeight.Bolder)
             .fontColor(Color.White)
             .textAlign(TextAlign.Center)
             .width('90%')
-            .height(40)
 
           Text(this.subText)
-            .fontSize(18)
+            .fontSize(20)
             .fontColor('#DDDDDD')
             .fontWeight(FontWeight.Medium)
-            .textAlign(TextAlign.Center)
-            .width('95%')
             .margin({ top: 5 })
 
-          Blank().height('15%')
-        }
+          Blank().layoutWeight(1)
 
-        Button(this.isRunning ? "STOP" : "START")
-          .width(120)
-          .height(45)
-          .backgroundColor(Color.White)
-          .fontColor(Color.Black)
-          .fontWeight(FontWeight.Bold)
-          .fontSize(18)
-          .type(ButtonType.Capsule)
-          .shadow({ radius: 10, color: '#40000000', offsetY: 5 })
+          Row() {
+            Button("STOP")
+              .height(50)
+              .width('35%')
+              .backgroundColor('#330000')
+              .fontColor('#FF6666')
+              .borderRadius(12)
+              .onClick(() => this.toggleState())
+
+            Blank().width(12)
+
+            if (this.showCalibrate) {
+              Button("RE-CALIBRATE")
+                .height(50)
+                .layoutWeight(1)
+                .backgroundColor('#333333')
+                .fontColor(Color.White)
+                .borderRadius(12)
+                .onClick(() => this.calibrate())
+            }
+          }
+          .width('90%')
           .margin({ bottom: 20 })
-          .onClick(() => {
-            this.toggleState();
-          })
+        }
       }
       .width('100%')
       .height('100%')
-      .justifyContent(FlexAlign.Center)
     }
     .width('100%')
     .height('100%')
