@@ -46,6 +46,14 @@
           "abilities": [ "EntryAbility" ],
           "when": "inuse"
         }
+      },
+      {
+        "name": "ohos.permission.GYROSCOPE",
+        "reason": "$string:why_gyroscope",
+        "usedScene": {
+          "abilities": [ "EntryAbility" ],
+          "when": "inuse"
+        }
       }
     ],
 

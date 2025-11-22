@@ -27,6 +27,10 @@
     {
       "name": "why_vibrate",
       "value": "Benötigt, um Vibrationsfeedback zu geben."
+    },
+    {
+      "name": "why_gyroscope",
+      "value": "Benötigt für Formkorrektur"
     }
   ]
 }

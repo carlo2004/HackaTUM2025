@@ -1,67 +1,93 @@
-// src/main/ets/manager/CPRManager.ts
-import { SensorService } from '../services/SensorService';
 import { FeedbackService } from '../services/FeedbackService';
-import { CPRStats, PatientProfile } from '../model/Models';
+import { AudioService } from '../services/AudioService';
+import { CPRStats } from '../model/Models';
 
 export class CPRManager {
-  // Dependencies
-  private sensors: SensorService;
   private haptics: FeedbackService;
-
-  // State
+  private audio: AudioService;
   public stats: CPRStats = new CPRStats();
-  public profile: PatientProfile = new PatientProfile();
-  private lastPushTime: number = 0;
-  private isRunning: boolean = false;
 
-  // Callback to update UI
-  private uiUpdateCallback: (stats: CPRStats) => void = () => {};
+  public feedbackText: string = "PERFECT";
+
+  private isRunning: boolean = false;
+  private metronomeTimer: number = 0;
+
+  private lastErrorTime: number = 0;
+  private lastPositiveTime: number = 0;
+
+  private uiUpdateCallback: (stats: CPRStats, text: string) => void = () => {};
 
   constructor() {
-    this.sensors = new SensorService();
     this.haptics = new FeedbackService();
-
-    // Hook up the sensor to our logic
-    this.sensors.setCallback((force: number): void => {
-      this.handlePush(force);
-    });
+    this.audio = new AudioService();
   }
 
-  setUIUpdateCallback(cb: (stats: CPRStats) => void) {
+  setUIUpdateCallback(cb: (stats: CPRStats, text: string) => void) {
     this.uiUpdateCallback = cb;
+  }
+
+  public ingestAIResults(bpm: number, depth: number) {
+    this.stats.currentBPM = bpm;
+    this.stats.lastPushDepth = depth;
+    this.stats.totalCompressions++;
+
+    this.decideFeedback(bpm, depth);
+
+    this.uiUpdateCallback(this.stats, this.feedbackText);
+  }
+
+  private decideFeedback(bpm: number, depth: number) {
+    let now = Date.now();
+
+    if (now - this.lastErrorTime < 2000) return;
+
+    if (bpm > 125) {
+      this.handleError("TOO FAST", "slower.mp3");
+      return;
+    }
+    if (bpm < 100) {
+      this.handleError("TOO SLOW", "faster.mp3");
+      return;
+    }
+
+    if (depth < 5.0) {
+      this.handleError("PUSH DEEPER", "deeper.mp3");
+      return;
+    }
+    if (depth > 6.0) {
+      this.handleError("PUSH LIGHTER", "lighter.mp3");
+      return;
+    }
+
+    this.feedbackText = "PERFECT RHYTHM";
+
+    if (now - this.lastPositiveTime > 15000) {
+      this.audio.playVoiceCommand("youreDoingGreat.mp3");
+      this.lastPositiveTime = now;
+    }
+  }
+
+  private handleError(text: string, audioFile: string) {
+    this.feedbackText = text;
+    this.haptics.triggerError();
+    this.audio.playVoiceCommand(audioFile);
+    this.lastErrorTime = Date.now();
   }
 
   startCPR() {
     this.isRunning = true;
     this.stats.startTime = Date.now();
     this.stats.totalCompressions = 0;
-    this.sensors.start();
 
-    // Start the Metronome Loop (110 BPM)
-    setInterval(() => {
+    this.audio.playVoiceCommand("startingCPRassist.mp3");
+
+    this.metronomeTimer = setInterval(() => {
       if(this.isRunning) this.haptics.triggerMetronome();
-    }, (60000 / this.profile.targetBPM));
+    }, 545);
   }
 
   stopCPR() {
     this.isRunning = false;
-    this.sensors.stop();
-  }
-
-  // The Core Logic (Debouncing + Counting)
-  private handlePush(force: number) {
-    let now = Date.now();
-    if (now - this.lastPushTime > 300) { // Debounce
-      this.lastPushTime = now;
-      this.stats.totalCompressions++;
-      this.stats.lastPushDepth = force;
-
-      // Calculate real-time BPM based on last 5 pushes (advanced logic here)
-      // For now, simplified:
-      console.info("Good Compression! Count: " + this.stats.totalCompressions);
-
-      // Notify UI
-      this.uiUpdateCallback(this.stats);
-    }
+    clearInterval(this.metronomeTimer);
   }
 }
