@@ -17,6 +17,12 @@ export class CPRManager {
   private lastErrorTime: number = 0;
   private lastPositiveTime: number = 0;
 
+  private ERROR_COOLDOWN: number = 5000;
+
+  private shallowPushCounter: number = 0;
+  private erraticRhythmCounter: number = 0;
+  private FATIGUE_THRESHOLD: number = 10;
+
   private uiUpdateCallback: (stats: CPRStats, text: string) => void = () => {};
 
   constructor(context: common.UIAbilityContext) {
@@ -48,14 +54,26 @@ export class CPRManager {
     let now = Date.now();
 
     if (bpm === 0) {
-
       if (now - this.lastErrorTime > 3000) {
         this.handleError("PRESS FASTER", "faster.mp3");
       }
       return;
     }
 
-    if (now - this.lastErrorTime < 2500) return;
+    if (now - this.lastErrorTime < this.ERROR_COOLDOWN) return;
+
+    if (bpm >= 100 && bpm <= 120) {
+
+      if (now - this.lastPositiveTime > 12000) {
+        this.feedbackText = "PERFECT RHYTHM";
+        this.audio.playVoiceCommand("youreDoingGreat.mp3");
+        this.lastPositiveTime = now;
+      } else {
+        this.feedbackText = "PERFECT RHYTHM";
+      }
+
+      return;
+    }
 
     if (bpm > 120) {
       this.handleError("PRESS SLOWER", "slower.mp3");
@@ -66,11 +84,6 @@ export class CPRManager {
       return;
     }
 
-    this.feedbackText = "PERFECT RHYTHM";
-    if (now - this.lastPositiveTime > 12000) {
-      this.audio.playVoiceCommand("youreDoingGreat.mp3");
-      this.lastPositiveTime = now;
-    }
   }
 
   private handleError(text: string, audioFile: string) {
