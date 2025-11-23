@@ -145,7 +145,7 @@ export class CPRManager {
       if(this.isRunning) {
         this.calibrateSensor(sensorService);
       }
-    }, 4000);
+    }, 5000);
 
     this.metronomeTimer = setInterval(() => {
       if(this.isRunning) this.haptics.triggerMetronome();

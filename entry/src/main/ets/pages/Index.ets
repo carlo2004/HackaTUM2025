@@ -35,6 +35,7 @@ struct Index {
         else if (text.includes("SLOW")) this.subText = "SLOW DOWN";
         else if (text.includes("DEEPER")) this.subText = "PUSH HARDER";
         else if (text.includes("RELEASE")) this.subText = "RELEASE CHEST";
+        else if (text.includes("GUIDE")) this.subText = "LISTEN TO INSTRUCTIONS";
         else this.subText = "CHECK RHYTHM";
       }
     });
@@ -52,8 +53,17 @@ struct Index {
     this.isRunning = !this.isRunning;
     if (this.isRunning) {
       this.cprManager.startCPR(this.sensors);
-      this.sensors.start();
+
+      this.feedbackMsg = "GUIDE PLAYING";
+      this.subText = "LISTEN TO INSTRUCTIONS";
       this.showCalibrate = true;
+
+      setTimeout(() => {
+        if (this.isRunning) {
+          this.sensors.start();
+        }
+      }, 5000);
+
     } else {
       this.cprManager.stopCPR();
       this.sensors.stop();
@@ -89,71 +99,83 @@ struct Index {
 
       Column() {
         if (!this.isRunning) {
-          Blank().height('30%')
+
+          Blank().layoutWeight(1)
+
           Text("CPR ASSIST")
-            .fontSize(24)
+            .fontSize(22)
             .fontWeight(FontWeight.Bold)
             .fontColor(Color.White)
-          Blank().height('5%')
+            .margin({ bottom: 8 })
+
           Button("START")
-            .width(140).height(140)
-            .borderRadius(70)
+            .width(110)
+            .height(110)
+            .borderRadius(55)
             .backgroundColor('#E60000')
             .fontColor(Color.White)
             .fontSize(24)
             .fontWeight(FontWeight.Bold)
             .onClick(() => this.toggleState())
-          Blank().height('15%')
+
+          Blank().layoutWeight(1.2)
+
         } else {
-          Blank().height('15%')
+
+          Blank().height('5%')
 
           Text(this.currentBPM)
-            .fontSize(38)
+            .fontSize(40)
             .fontColor(Color.White)
             .fontWeight(FontWeight.Bold)
 
           Text("BPM")
-            .fontSize(14).fontColor(Color.Gray)
-            .margin({ bottom: 10 })
+            .fontSize(12).fontColor(Color.Gray)
+            .margin({ bottom: 5 })
 
           Text(this.feedbackMsg)
-            .fontSize(28)
+            .fontSize(24)
             .fontWeight(FontWeight.Bolder)
             .fontColor(Color.White)
             .textAlign(TextAlign.Center)
             .width('90%')
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(this.subText)
-            .fontSize(20)
+            .fontSize(16)
             .fontColor('#DDDDDD')
             .fontWeight(FontWeight.Medium)
-            .margin({ top: 5 })
+            .margin({ top: 2 })
 
           Blank().layoutWeight(1)
 
           Row() {
             Button("STOP")
-              .height(50)
-              .width('35%')
+              .height(38)
+              .width('38%')
               .backgroundColor('#330000')
               .fontColor('#FF6666')
-              .borderRadius(12)
+              .fontSize(13)
+              .borderRadius(19)
               .onClick(() => this.toggleState())
 
-            Blank().width(12)
+            Blank().width(8)
 
             if (this.showCalibrate) {
-              Button("RE-CALIBRATE")
-                .height(50)
+              Button("CALIBRATE")
+                .height(38)
                 .layoutWeight(1)
                 .backgroundColor('#333333')
                 .fontColor(Color.White)
-                .borderRadius(12)
+                .fontSize(12)
+                .borderRadius(19)
                 .onClick(() => this.calibrate())
             }
           }
-          .width('90%')
-          .margin({ bottom: 20 })
+          .width('85%')
+
+          .margin({ bottom: 60 })
         }
       }
       .width('100%')
