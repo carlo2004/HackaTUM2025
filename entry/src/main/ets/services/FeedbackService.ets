@@ -4,16 +4,17 @@ export class FeedbackService {
 
   triggerMetronome() {
     try {
+
       vibrator.startVibration({
-        type: 'preset',
-        effectId: 'haptic.clock.timer',
-        count: 1,
-      }, { usage: 'physicalFeedback' });
+        type: 'time',
+        duration: 100,
+      }, { usage: 'alarm' });
     } catch (e) {}
   }
 
   triggerError() {
     try {
+
       vibrator.startVibration({
         type: 'time',
         duration: 800,
