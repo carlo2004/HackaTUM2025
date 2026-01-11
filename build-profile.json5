@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "C:\\Users\\attil\\.ohos\\config\\default_HackaTUM2025_XDKmznv1l1FHslh1Tr7mAtLir9rJilyE-B-L8s2qUHw=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001B1726E2B60EC491C49CC21515CFD7783B6320C56201C724D2A3D36B2FA1F2CA6D4AA2008E734B78",
-          "profile": "C:\\Users\\attil\\.ohos\\config\\default_HackaTUM2025_XDKmznv1l1FHslh1Tr7mAtLir9rJilyE-B-L8s2qUHw=.p7b",
+          "storeFile": "C:/tmp/dritterversuch/Pulse3.p12",
+          "storePassword": "00000020A129A7952F3D0B2C87E69AB331369EB3FD6C7777A8CAD50E5A7EC55D5DB872C6BBACD4B18718BD6E35E6852A",
+          "keyAlias": "smartcprassistant",
+          "keyPassword": "00000020A45E8ABC2183A3F7D4CD1640F9303148A4A43017D63493F2306537163A232EB91A7D4B41C938D70CAFC25059",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\attil\\.ohos\\config\\default_HackaTUM2025_XDKmznv1l1FHslh1Tr7mAtLir9rJilyE-B-L8s2qUHw=.p12",
-          "storePassword": "0000001BDF71F161BE2E20F265C9C325C915C59BCF733E62DBDD856BEF8E6AFB51E0487B3B7F3E104366ED"
+          "profile": "C:/tmp/dritterversuch/Pulse3Release.p7b",
+          "certpath": "C:/tmp/dritterversuch/Pulse3.cer"
         }
       }
     ],
