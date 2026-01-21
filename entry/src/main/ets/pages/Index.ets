@@ -47,6 +47,14 @@ struct Index {
     });
   }
 
+  aboutToDisappear() {
+    if (this.cprManager) {
+      this.cprManager.stopCPR();
+    }
+    this.sensors.stop();
+    this.isRunning = false;
+  }
+
   toggleState() {
     if (!this.cprManager) return;
 
